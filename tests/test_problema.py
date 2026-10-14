@@ -40,6 +40,17 @@ def test_expone_escenario_unidad_y_objetivo(problema, datos):
     assert problema.es_mision is False
 
 
+def test_expone_base_y_recurso_disponible(problema):
+    assert problema.base == (0, 0)
+    assert problema.recurso_disponible == (2, 2)
+
+
+def test_recurso_con_portador_no_esta_disponible(datos):
+    problema = ProblemaNavegacion(replace(datos, portador="B1"))
+    assert problema.recurso_disponible is None
+    assert problema.base == (0, 0)
+
+
 def test_sucesores_del_estado_inicial_en_orden(problema):
     assert problema.sucesores(EstadoNavegacion(0, 1, False)) == [
         ("derecha", EstadoNavegacion(0, 2, False), 2),

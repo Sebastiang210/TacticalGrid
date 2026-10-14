@@ -14,7 +14,8 @@ class ProblemaNavegacion:
     """
     Navegación de una unidad por el mapa; solo cuenta el terreno (otras unidades no estorban).
 
-    Expone escenario, unidad (id), objetivo (Posicion o None) y es_mision (bool).
+    Expone escenario, unidad (id), objetivo (Posicion o None), es_mision (bool), base (base del
+    bando de la unidad) y recurso_disponible (posición del recurso, o None si alguien lo porta).
     """
 
     def __init__(
@@ -61,6 +62,10 @@ class ProblemaNavegacion:
         self.unidad: str = unidad.id
         self.objetivo: Posicion | None = prueba.objetivo
         self.es_mision: bool = prueba.mision == "llevar_recurso"
+        self.base: Posicion = datos.escenario.base_de(unidad.bando)
+        self.recurso_disponible: Posicion | None = (
+            None if datos.portador is not None else datos.recurso
+        )
 
     def inicial(self) -> EstadoNavegacion:
         """
