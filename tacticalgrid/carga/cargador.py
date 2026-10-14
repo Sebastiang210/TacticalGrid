@@ -4,12 +4,24 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from tacticalgrid.carga.validador import validar
 from tacticalgrid.config import LIMITE_TURNOS_POR_DEFECTO
 from tacticalgrid.core.escenario import Escenario, Posicion, TipoTerreno
 
 
 class ErrorCarga(Exception):
     """Error al leer o interpretar un archivo de escenario."""
+
+
+class ErrorValidacion(ErrorCarga):
+    """El escenario se leyó bien, pero incumple una o más reglas de validación."""
+
+    def __init__(self, errores: list[str] | tuple[str, ...]) -> None:
+        self.errores: tuple[str, ...] = tuple(errores)
+        cantidad = len(self.errores)
+        resumen = "1 error" if cantidad == 1 else f"{cantidad} errores"
+        lineas = [f"El escenario no es válido: {resumen}", *(f"- {e}" for e in self.errores)]
+        super().__init__("\n".join(lineas))
 
 
 @dataclass(frozen=True)
@@ -144,12 +156,15 @@ def construir_datos(datos: dict) -> DatosEscenario:
 
 def cargar_escenario(ruta: str | Path) -> DatosEscenario:
     """
-    Purpose: Cargar un escenario completo desde un archivo JSON.
+    Purpose: Cargar un escenario completo desde un archivo JSON, validándolo antes de construirlo.
     Preconditions: ruta apunta a un escenario JSON legible.
-    Postconditions: Devuelve DatosEscenario; lanza ErrorCarga si la lectura falla.
+    Postconditions: Devuelve DatosEscenario; lanza ErrorCarga si la lectura falla y
+        ErrorValidacion (con todos los errores) si el escenario incumple alguna regla.
     Complexity: tiempo O(n), espacio O(n) con n = tamaño del escenario
     Student validation:  Se prueba mediante los tests en /tests/test_cargador
     """
     datos = leer_json(ruta)
-    
+    errores = validar(datos)
+    if errores:
+        raise ErrorValidacion(errores)
     return construir_datos(datos)
