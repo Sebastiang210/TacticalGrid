@@ -27,7 +27,7 @@ def test_distancia_a_si_misma_es_cero(tabla):
 
 def test_celda_aislada_es_inalcanzable(datos):
     terreno = [list(fila) for fila in datos.escenario.terreno]
-    terreno[2][3] = terreno[3][2] = "muro"  # 
+    terreno[2][3] = terreno[3][2] = "muro"  
     escenario = replace(datos.escenario, terreno=tuple(tuple(f) for f in terreno))
     tabla = TablaDistancias(escenario)
     assert tabla.distancia((0, 0), (3, 3)) == DISTANCIA_INALCANZABLE
