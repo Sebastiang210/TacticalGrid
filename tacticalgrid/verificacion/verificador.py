@@ -1,12 +1,13 @@
 """Verificación independiente de caminos de búsqueda y de partidas completas."""
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from tacticalgrid.adversarial.partida import Partida
 from tacticalgrid.busqueda.resultado import Resultado
 from tacticalgrid.carga.cargador import DatosEscenario
-from tacticalgrid.config import DESPLAZAMIENTOS
+from tacticalgrid.config import DESPLAZAMIENTOS, ORDEN_DIRECCIONES_POR_DEFECTO
 from tacticalgrid.core.juego import ReglasJuego
 
 
@@ -133,11 +134,16 @@ def _distancia_manhattan(a: tuple[int, int], b: tuple[int, int]) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-def verificar_partida(datos: DatosEscenario, partida: Partida) -> ReporteVerificacion:
+def verificar_partida(
+    datos: DatosEscenario,
+    partida: Partida,
+    orden_direcciones: Iterable[str] = ORDEN_DIRECCIONES_POR_DEFECTO,
+) -> ReporteVerificacion:
     """
     Purpose: Comprobar que una Partida es legal de principio a fin, revisando además de forma
         independiente las invariantes de cada turno.
-    Preconditions: datos es el escenario con el que se jugó la partida.
+    Preconditions: datos es el escenario con el que se jugó la partida; orden_direcciones es
+        el orden de direcciones con el que se construyeron sus reglas.
     Postconditions: Devuelve un ReporteVerificacion (costo_recalculado None) con TODOS los
         errores, indicando el turno. Las comprobaciones de celda no transitable, base rival y
         casilla compartida se aplican solo al destino de la unidad movida (un escenario inicial
@@ -147,7 +153,7 @@ def verificar_partida(datos: DatosEscenario, partida: Partida) -> ReporteVerific
     AI intervention: Código generado por IA a partir de la especificación del equipo.
     Student validation: Se valida mediante tests/test_verificador.py
     """
-    reglas = ReglasJuego(datos)
+    reglas = ReglasJuego(datos, orden_direcciones)
     escenario = datos.escenario
     estados, jugadas = partida.estados, partida.jugadas
     errores: list[str] = []
