@@ -3,10 +3,14 @@
 from dataclasses import replace
 
 import pytest
+from conftest import RAIZ
 
 from tacticalgrid.adversarial.minimax import alfa_beta, minimax
 from tacticalgrid.adversarial.utilidad import Evaluador
+from tacticalgrid.carga.cargador import cargar_escenario
 from tacticalgrid.core.juego import PASAR, EstadoJuego, Jugada, ReglasJuego
+
+RUTA_ADV = RAIZ / "scenarios" / "casos" / "caso7_8_10_adversarial.json"
 
 
 @pytest.fixture
@@ -111,3 +115,73 @@ def test_estado_terminal_lanza_valueerror(datos, algoritmo):
     terminal = reglas.aplicar(reglas.estado_inicial(), PASAR)
     with pytest.raises(ValueError):
         algoritmo(reglas, evaluador, terminal, 1)
+
+
+# --- jugadas consideradas en la raíz ---
+
+JUGADAS_RAIZ = ["A1 derecha", "A1 izquierda", "A2 arriba", "A2 abajo", "pasar"]
+ORDEN_ALTERNATIVO = ("abajo", "izquierda", "arriba", "derecha")
+
+
+def decidir_adv(algoritmo, profundidad, orden=None):
+    datos = cargar_escenario(RUTA_ADV)
+    reglas = ReglasJuego(datos) if orden is None else ReglasJuego(datos, orden)
+    return reglas, algoritmo(reglas, Evaluador(reglas), reglas.estado_inicial(), profundidad)
+
+
+def textos(decision):
+    return [str(vj.jugada) for vj in decision.jugadas_consideradas]
+
+
+def valores(decision):
+    return [vj.valor for vj in decision.jugadas_consideradas]
+
+
+def exactos(decision):
+    return [vj.exacto for vj in decision.jugadas_consideradas]
+
+
+def test_minimax_p2_jugadas_consideradas():
+    _, decision = decidir_adv(minimax, 2)
+    assert textos(decision) == JUGADAS_RAIZ
+    assert valores(decision) == [-117, -117, -120, -114, -117]
+    assert all(exactos(decision))
+    assert str(decision.jugada) == "A2 abajo"
+    assert decision.valor == max(valores(decision))
+
+
+def test_alfa_beta_p2_jugadas_consideradas():
+    _, decision = decidir_adv(alfa_beta, 2)
+    assert textos(decision) == JUGADAS_RAIZ
+    assert valores(decision) == [-117, -117, -120, -114, -117]
+    assert exactos(decision) == [True, False, False, True, False]
+
+
+def test_minimax_p3_jugadas_consideradas():
+    _, decision = decidir_adv(minimax, 3)
+    assert textos(decision) == JUGADAS_RAIZ
+    assert valores(decision) == [0, -114, -117, 0, -114]
+    assert all(exactos(decision))
+    assert str(decision.jugada) == "A1 derecha"  # empata con A2 abajo; gana la primera
+
+
+def test_alfa_beta_p3_jugadas_consideradas():
+    _, decision = decidir_adv(alfa_beta, 3)
+    assert exactos(decision) == [True, False, False, False, False]
+
+
+@pytest.mark.parametrize("orden", [None, ORDEN_ALTERNATIVO])
+@pytest.mark.parametrize("profundidad", [1, 2, 3, 4])
+def test_propiedades_de_jugadas_consideradas(profundidad, orden):
+    reglas, mm = decidir_adv(minimax, profundidad, orden)
+    _, ab = decidir_adv(alfa_beta, profundidad, orden)
+    cantidad = len(reglas.jugadas_legales(reglas.estado_inicial()))
+    for decision in (mm, ab):
+        assert len(decision.jugadas_consideradas) == cantidad
+        elegida = next(vj for vj in decision.jugadas_consideradas if vj.jugada == decision.jugada)
+        assert elegida.valor == decision.valor and elegida.exacto
+    assert all(vj.valor <= ab.valor for vj in ab.jugadas_consideradas if not vj.exacto)
+    por_jugada = {vj.jugada: vj.valor for vj in mm.jugadas_consideradas}
+    for vj in ab.jugadas_consideradas:
+        if vj.exacto:
+            assert vj.valor == por_jugada[vj.jugada]

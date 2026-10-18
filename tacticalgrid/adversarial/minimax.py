@@ -9,8 +9,21 @@ from tacticalgrid.core.juego import EstadoJuego, Jugada, ReglasJuego
 
 
 @dataclass(frozen=True)
+class ValorJugada:
+    """
+    Valor que devolvió el hijo de la raíz de una jugada.
+
+    exacto es False cuando alfa-beta cortó la rama: valor es entonces solo una cota superior.
+    """
+
+    jugada: Jugada
+    valor: float
+    exacto: bool
+
+
+@dataclass(frozen=True)
 class ResultadoDecision:
-    """Jugada elegida y métricas de la búsqueda."""
+    """Jugada elegida, métricas de la búsqueda y valor de cada jugada de la raíz."""
 
     algoritmo: str
     jugada: Jugada
@@ -20,6 +33,7 @@ class ResultadoDecision:
     nodos_evaluados: int
     podas: int
     tiempo_ms: float
+    jugadas_consideradas: tuple[ValorJugada, ...] = ()
 
 
 class _Busqueda:
@@ -91,12 +105,15 @@ def _decidir(
     busqueda = _Busqueda(reglas, evaluador, estado)
     mejor_jugada = None
     mejor_valor = -math.inf
+    consideradas: list[ValorJugada] = []
     for jugada in reglas.jugadas_legales(estado):
         hijo = busqueda.hijo(estado, jugada)
+        alfa = mejor_valor  # ventana real con la que se busca el hijo: (alfa, +inf)
         if algoritmo == "Minimax":
             valor = busqueda.minimax(hijo, profundidad - 1)
         else:
-            valor = busqueda.alfa_beta(hijo, profundidad - 1, mejor_valor, math.inf)
+            valor = busqueda.alfa_beta(hijo, profundidad - 1, alfa, math.inf)
+        consideradas.append(ValorJugada(jugada, valor, algoritmo == "Minimax" or valor > alfa))
         if valor > mejor_valor:
             mejor_valor, mejor_jugada = valor, jugada
     tiempo_ms = (time.perf_counter() - inicio) * 1000
@@ -109,6 +126,7 @@ def _decidir(
         nodos_evaluados=busqueda.evaluados,
         podas=busqueda.podas,
         tiempo_ms=tiempo_ms,
+        jugadas_consideradas=tuple(consideradas),
     )
 
 
@@ -118,8 +136,9 @@ def minimax(
     """
     Purpose: Elegir la mejor jugada del bando en turno explorando el árbol completo.
     Preconditions: profundidad >= 1 y estado no terminal.
-    Postconditions: Devuelve la primera jugada con el mejor valor (MAX = turno de la raíz) y
-        las métricas; ValueError si no se cumplen las precondiciones.
+    Postconditions: Devuelve la primera jugada con el mejor valor (MAX = turno de la raíz), las
+        métricas y jugadas_consideradas (valor exacto de cada jugada de la raíz, en el orden de
+        jugadas_legales); ValueError si no se cumplen las precondiciones.
     Complexity: tiempo O(b^d), espacio O(d) con b <= 4u+1 jugadas y d = profundidad
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
@@ -135,7 +154,8 @@ def alfa_beta(
     Purpose: Igual que minimax, pero podando ramas que no pueden cambiar la decisión.
     Preconditions: profundidad >= 1 y estado no terminal.
     Postconditions: Misma jugada y mismo valor que minimax con igual profundidad; podas
-        cuenta los cortes; ValueError si no se cumplen las precondiciones.
+        cuenta los cortes; jugadas_consideradas marca como no exactas (cota superior) las
+        jugadas de la raíz cuya rama se cortó; ValueError si no se cumplen las precondiciones.
     Complexity: tiempo O(b^(d/2)) en el mejor caso y O(b^d) en el peor, espacio O(d), con
         b <= 4u+1 jugadas y d = profundidad
     AI usage: Yes

@@ -254,3 +254,33 @@ def test_resumir_verificacion():
     texto = resumir_verificacion(reporte)
     assert texto.startswith("✘ 2 error(es)")
     assert texto.splitlines()[1:] == ["  - error uno", "  - error dos"]
+
+
+def test_resumir_decision_muestra_las_jugadas_consideradas(datos):
+    texto = resumir_decision(ejecutar_decision(datos, "Alfa-beta", 2), ORDEN_DIRECCIONES_POR_DEFECTO, 2, 1)
+    assert "Jugadas consideradas" in texto
+    assert "►" in texto
+    assert "≤" in texto
+    assert "(cota: rama podada)" in texto
+    assert "← elegida" in texto
+    exacto = resumir_decision(ejecutar_decision(datos, "Minimax", 2), ORDEN_DIRECCIONES_POR_DEFECTO, 2, 1)
+    assert "Jugadas consideradas" in exacto and "≤" not in exacto
+
+
+def test_resumir_decision_marca_una_sola_jugada_en_empate(datos):
+    decision = ejecutar_decision(datos, "Minimax", 3)
+    valores = [vj.valor for vj in decision.jugadas_consideradas]
+    assert valores.count(0) == 2  # A1 derecha y A2 abajo empatan
+    texto = resumir_decision(decision, ORDEN_DIRECCIONES_POR_DEFECTO, 3, 1)
+    marcadas = [linea for linea in texto.splitlines() if "►" in linea]
+    assert texto.count("►") == 1
+    assert "A1 derecha" in marcadas[0]
+
+
+def test_formatear_decision_incluye_jugadas_consideradas(datos):
+    decision = ejecutar_decision(datos, "Alfa-beta", 2)
+    contenido = json.loads(formatear_decision(decision, ORDEN_DIRECCIONES_POR_DEFECTO))
+    consideradas = contenido["jugadas_consideradas"]
+    assert len(consideradas) == 5
+    assert all(set(c) == {"jugada", "valor", "exacto"} for c in consideradas)
+    assert [c["exacto"] for c in consideradas] == [True, False, False, True, False]

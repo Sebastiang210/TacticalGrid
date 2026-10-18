@@ -247,8 +247,9 @@ def formatear_decision(decision: ResultadoDecision, orden: Iterable[str]) -> str
     Purpose: Texto JSON legible de una decisión adversarial.
     Preconditions: decision proviene de ejecutar_decision con ese orden.
     Postconditions: JSON con algoritmo, accion_seleccionada, valor, profundidad,
-        nodos_generados, nodos_evaluados, nodos_podados, tiempo_ms y orden.
-    Complexity: tiempo O(1), espacio O(1)
+        nodos_generados, nodos_evaluados, nodos_podados, tiempo_ms, orden y
+        jugadas_consideradas (lista de {jugada, valor, exacto}).
+    Complexity: tiempo O(b), espacio O(b) con b = jugadas de la raíz
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
     Student validation: Se valida en tests/test_servicio.py
@@ -264,6 +265,10 @@ def formatear_decision(decision: ResultadoDecision, orden: Iterable[str]) -> str
             "nodos_podados": decision.podas,
             "tiempo_ms": round(decision.tiempo_ms, 3),
             "orden": list(orden),
+            "jugadas_consideradas": [
+                {"jugada": str(vj.jugada), "valor": vj.valor, "exacto": vj.exacto}
+                for vj in decision.jugadas_consideradas
+            ],
         }
     )
 
@@ -296,6 +301,8 @@ _ANCHO_VALOR = 14
 _CASILLAS_POR_LINEA = 12
 _JUGADAS_POR_LINEA = 4
 _ANCHO_JUGADA = 18
+_ANCHO_JUGADA_BLOQUE = 12
+_ANCHO_VALOR_BLOQUE = 8
 
 
 def _numero(valor: float) -> str:
@@ -389,8 +396,11 @@ def resumir_decision(
     Purpose: Resumen legible (texto plano) de una decisión adversarial para el panel.
     Preconditions: decision proviene de ejecutar_decision con ese orden y profundidad.
     Postconditions: Cabecera con número, algoritmo, profundidad y orden; Acción recomendada,
-        Valor y en dos columnas Nodos generados, Evaluados, Podados y Tiempo.
-    Complexity: tiempo O(1), espacio O(1)
+        Valor y en dos columnas Nodos generados, Evaluados, Podados y Tiempo. Si hay
+        jugadas_consideradas, agrega el bloque "Jugadas consideradas" en el orden de generación,
+        con "►" en la jugada elegida (se compara por jugada, no por valor) y "≤" delante de los
+        valores que son solo cota; si hay alguna cota, cierra con una línea que lo explica.
+    Complexity: tiempo O(b), espacio O(b) con b = jugadas de la raíz
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
     Student validation: Se valida en tests/test_servicio.py
@@ -408,7 +418,30 @@ def resumir_decision(
             ]
         ),
     ]
+    if decision.jugadas_consideradas:
+        lineas += _bloque_jugadas_consideradas(decision)
     return "\n".join(lineas)
+
+
+def _bloque_jugadas_consideradas(decision: ResultadoDecision) -> list[str]:
+    """Líneas del bloque "Jugadas consideradas"; "►" se decide por jugada, no por valor."""
+    lineas = ["", "  Jugadas consideradas:"]
+    for vj in decision.jugadas_consideradas:
+        elegida = vj.jugada == decision.jugada
+        valor = ("" if vj.exacto else "≤ ") + _numero(vj.valor)
+        linea = f"  {'►' if elegida else ' '} {vj.jugada!s:<{_ANCHO_JUGADA_BLOQUE}}"
+        linea += f"{valor:>{_ANCHO_VALOR_BLOQUE}}"
+        if elegida:
+            linea += "     ← elegida"
+        elif not vj.exacto:
+            linea += "     (cota: rama podada)"
+        lineas.append(linea)
+    if any(not vj.exacto for vj in decision.jugadas_consideradas):
+        lineas.append(
+            "  ≤: valor máximo posible; alfa-beta no necesitó calcularlo exactamente porque ya "
+            "sabía que esa jugada no supera a la elegida."
+        )
+    return lineas
 
 
 def resumir_partida(
