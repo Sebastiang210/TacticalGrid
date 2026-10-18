@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "mapa": {"filas": 8, "columnas": 10},
+  "tipos_terreno": {
+    "camino": {"costo": 1, "transitable": true},
+    "pasto": {"costo": 2, "transitable": true},
+    "bosque": {"costo": 4, "transitable": true},
+    "pantano": {"costo": 7, "transitable": true},
+    "muro": {"transitable": false}
+  },
+  "terreno": [
+    ["camino","camino","camino","camino","camino","camino","camino","pasto","pasto","pasto"],
+    ["pasto","bosque","bosque","bosque","bosque","bosque","camino","pasto","pasto","pasto"],
+    ["pasto","bosque","pantano","pantano","pantano","bosque","camino","muro","muro","pasto"],
+    ["pasto","bosque","pantano","pantano","pantano","bosque","camino","camino","muro","pasto"],
+    ["pasto","bosque","pantano","pantano","pantano","bosque","camino","muro","muro","pasto"],
+    ["pasto","bosque","bosque","bosque","bosque","bosque","camino","pasto","pasto","pasto"],
+    ["pasto","pasto","pasto","pasto","pasto","bosque","camino","pasto","pasto","pasto"],
+    ["camino","camino","camino","camino","camino","camino","camino","pasto","pasto","pasto"]
+  ],
+  "bases": {"A": {"fila": 7, "columna": 0}, "B": {"fila": 0, "columna": 9}},
+  "recurso": {"fila": 3, "columna": 7},
+  "unidades": [
+    {"id": "A1", "bando": "A", "tipo": "estandar", "fila": 0, "columna": 0},
+    {"id": "A2", "bando": "A", "tipo": "estandar", "fila": 6, "columna": 0},
+    {"id": "B1", "bando": "B", "tipo": "estandar", "fila": 1, "columna": 9},
+    {"id": "B2", "bando": "B", "tipo": "estandar", "fila": 0, "columna": 8}
+  ],
+  "turno": "A",
+  "juego": {"portador_recurso": null, "profundidad_maxima_minimax": 4},
+  "prueba": {"modo": "busqueda", "unidad_inicio": "A1", "mision": "llevar_recurso"}
+}

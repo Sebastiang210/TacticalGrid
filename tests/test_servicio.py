@@ -10,6 +10,7 @@ from tacticalgrid.config import ORDEN_DIRECCIONES_POR_DEFECTO
 from tacticalgrid.core.juego import Jugada
 from tacticalgrid.ui.servicio import (
     ORDENES_DISPONIBLES,
+    dividir_camino,
     ejecutar_busqueda,
     ejecutar_decision,
     ejecutar_partida,
@@ -216,6 +217,35 @@ def test_resumir_partida(datos):
     empate = ejecutar_partida(replace(datos, limite_turnos=4), "Minimax", 2)
     texto = resumir_partida(empate, ORDEN_DIRECCIONES_POR_DEFECTO, 2, "Minimax", 5)
     assert "Empate por límite de turnos" in texto
+
+
+def test_dividir_camino_en_mision(datos):
+    mision = datos_mision(datos)
+    ida, vuelta = dividir_camino(ejecutar_busqueda(mision, "UCS"))
+    assert ida == [(0, 1), (0, 0), (1, 0), (2, 0), (2, 1), (2, 2)]
+    assert vuelta == [(2, 2), (2, 1), (2, 0), (1, 0), (0, 0)]
+    assert ida[-1] == vuelta[0] == mision.recurso
+
+
+def test_dividir_camino_en_prueba_normal(datos):
+    # UCS: su camino no pasa por el recurso (BFS sí pasa por (2, 2) y lo recoge).
+    resultado = ejecutar_busqueda(datos, "UCS")
+    ida, vuelta = dividir_camino(resultado)
+    assert vuelta == []
+    assert ida == [e.posicion for e in resultado.estados]
+
+
+def test_dividir_camino_con_unidad_portadora(datos):
+    resultado = ejecutar_busqueda(replace(datos, portador="A1"), "UCS")
+    ida, vuelta = dividir_camino(resultado)
+    assert ida == []
+    assert vuelta == [e.posicion for e in resultado.estados]
+
+
+def test_dividir_camino_sin_exito(datos):
+    resultado = ejecutar_busqueda(datos_mision(datos), "Beam", "h2", 1)
+    assert not resultado.exito
+    assert dividir_camino(resultado) == ([], [])
 
 
 def test_resumir_verificacion():

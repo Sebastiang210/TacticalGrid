@@ -1,0 +1,51 @@
+✔ E4x4 BFS costo: 14
+✔ E4x4 DFS costo: 10
+✔ E4x4 UCS costo: 7
+✔ E4x4 BFS movimientos: 4
+✔ E4x4 UCS movimientos: 6
+✔ E4x4 A*(h1) costo: 7
+✔ E4x4 A*(h2) costo: 7
+✔ E4x4 DFS orden (abajo, izquierda, arriba, derecha) costo: 16
+✔ MURO A*(h1) costo: 10
+✔ MURO A*(h2) costo: 10
+✔ MURO expandidos h2 (10) < h1 (24): True
+✔ MISION UCS costo: 15
+✔ MISION Beam h2 k=1 con solución: False
+✔ MISION Beam h2 k=2 costo: 21
+✔ MISION Beam h2 k=4 costo: 18
+✔ MISION Beam h2 k=8 costo: 15
+✔ GRANDE UCS costo: 21
+✔ ADV p=1 Minimax acción: A2 abajo
+✔ ADV p=1 Minimax valor: -2
+✔ ADV p=1 Minimax nodos generados: 5
+✔ ADV p=1 Alfa-beta acción: A2 abajo
+✔ ADV p=1 Alfa-beta valor: -2
+✔ ADV p=1 Alfa-beta nodos generados: 5
+✔ ADV p=2 Minimax acción: A2 abajo
+✔ ADV p=2 Minimax valor: -114
+✔ ADV p=2 Minimax nodos generados: 40
+✔ ADV p=2 Alfa-beta acción: A2 abajo
+✔ ADV p=2 Alfa-beta valor: -114
+✔ ADV p=2 Alfa-beta nodos generados: 22
+✔ ADV p=3 Minimax acción: A1 derecha
+✔ ADV p=3 Minimax valor: 0
+✔ ADV p=3 Minimax nodos generados: 201
+✔ ADV p=3 Alfa-beta acción: A1 derecha
+✔ ADV p=3 Alfa-beta valor: 0
+✔ ADV p=3 Alfa-beta nodos generados: 62
+✔ ADV p=4 Minimax acción: A1 derecha
+✔ ADV p=4 Minimax valor: -111
+✔ ADV p=4 Minimax nodos generados: 1136
+✔ ADV p=4 Alfa-beta acción: A1 derecha
+✔ ADV p=4 Alfa-beta valor: -111
+✔ ADV p=4 Alfa-beta nodos generados: 234
+✔ Alfa-beta == Minimax (acción y valor) en 58 comparaciones, distintas: 0
+✔ ORDEN valor de Alfa-beta en las 24 órdenes: {-6}
+✔ ORDEN nodos generados varían entre órdenes (18 valores): True
+✔ Partida ADV p=2 ganador: B
+✔ Partida ADV p=2 turnos: 18
+✔ Partida ADV p=3 ganador: empate
+✔ Partida ADV p=3 turnos: 200
+✔ Pantano 15: E4x4 UCS sigue en costo: 7
+✔ Pantano 15: E4x4 A*(h2) sigue en costo: 7
+Total: 50 ✔, 0 DIFERENCIA, de 50 comprobaciones

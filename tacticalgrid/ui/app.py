@@ -16,6 +16,7 @@ from tacticalgrid.ui.servicio import (
     ALGORITMOS_BUSQUEDA,
     ALGORITMOS_DECISION,
     ORDENES_DISPONIBLES,
+    dividir_camino,
     ejecutar_busqueda,
     ejecutar_decision,
     ejecutar_partida,
@@ -55,6 +56,8 @@ COLOR_NO_TRANSITABLE = "#333333"
 COLOR_BANDO = {"A": "#1e63c9", "B": "#d32f2f"}
 COLOR_PORTADOR = "#ffc107"
 COLOR_RESALTADO = "#ff6f00"
+COLOR_CAMINO_IDA = "#6a1b9a"
+COLOR_CAMINO_VUELTA = "#F28C28"
 LADO_MAXIMO_PX = 600
 RAIZ_ESCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 
@@ -69,7 +72,7 @@ def color_terreno(nombre: str, transitable: bool) -> str:
     Complexity: tiempo O(len(nombre)), espacio O(1)
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida y se hace seguimiento
     """
     if not transitable:
         return COLOR_NO_TRANSITABLE
@@ -100,17 +103,18 @@ class AplicacionTacticalGrid:
         Complexity: tiempo O(1), espacio O(1)
         AI usage: Yes
         AI intervention: Código generado por IA a partir de la especificación del equipo.
-        Student validation: Pendiente
+        Student validation: Se valida y se hace seguimiento
         """
         self.raiz = raiz
         self.datos: DatosEscenario | None = None
         self.estado: EstadoJuego | None = None
-        self.camino: list[Posicion] = []
+        self.ida: list[Posicion] = []
+        self.vuelta: list[Posicion] = []
         self.meta: Posicion | None = None
         self.resaltado: tuple[str, Posicion | None] | None = None
         self.partida = None
         self.indice = 0
-        self.ultimo = None  # (resultado, decisión o partida; orden; número; modo)
+        self.ultimo = None  
         self.ejecuciones = 0
         self.celda = 40
 
@@ -132,13 +136,25 @@ class AplicacionTacticalGrid:
         self.etiqueta_archivo.grid(row=0, column=0, sticky="w")
         self.lienzo = tk.Canvas(marco, width=320, height=320, bg="white", highlightthickness=0)
         self.lienzo.grid(row=1, column=0, sticky="nw", pady=4)
+        self.leyenda_camino = ttk.Frame(marco)
+        self.leyenda_camino.grid(row=2, column=0, sticky="w")
+        tk.Label(
+            self.leyenda_camino, text="▬ ida (sin recurso)", fg=COLOR_CAMINO_IDA, font=("", 9, "bold")
+        ).grid(row=0, column=0, padx=(0, 12))
+        tk.Label(
+            self.leyenda_camino,
+            text="▬ vuelta (con recurso)",
+            fg=COLOR_CAMINO_VUELTA,
+            font=("", 9, "bold"),
+        ).grid(row=0, column=1)
+        self.leyenda_camino.grid_remove()
         self.leyenda = ttk.Frame(marco)
-        self.leyenda.grid(row=2, column=0, sticky="w")
+        self.leyenda.grid(row=3, column=0, sticky="w")
         self.etiqueta_estado = ttk.Label(marco, text="")
-        self.etiqueta_estado.grid(row=3, column=0, sticky="w", pady=(4, 0))
+        self.etiqueta_estado.grid(row=4, column=0, sticky="w", pady=(4, 0))
 
         navegacion = ttk.Frame(marco)
-        navegacion.grid(row=4, column=0, sticky="w", pady=(4, 0))
+        navegacion.grid(row=5, column=0, sticky="w", pady=(4, 0))
         self.boton_anterior = ttk.Button(
             navegacion, text="◀ Anterior", command=lambda: self._navegar(-1)
         )
@@ -257,7 +273,8 @@ class AplicacionTacticalGrid:
 
     def _limpiar_vista(self) -> None:
         """Quita camino, resaltado y partida, y vuelve a mostrar el estado inicial."""
-        self.camino, self.meta, self.resaltado = [], None, None
+        self.ida, self.vuelta = [], []
+        self.meta, self.resaltado = None, None
         self.partida, self.indice = None, 0
         self.etiqueta_turno.configure(text="")
         self.estado = ReglasJuego(self.datos).estado_inicial() if self.datos else None
@@ -339,12 +356,13 @@ class AplicacionTacticalGrid:
         self._dibujar()
 
     def _mostrar_busqueda(self, resultado) -> None:
-        self.camino = [e.posicion for e in resultado.estados]
         prueba = self.datos.prueba
         if prueba.mision == "llevar_recurso":
+            self.ida, self.vuelta = dividir_camino(resultado)
             unidad = next(u for u in self.datos.unidades if u.id == prueba.unidad_inicio)
             self.meta = self.datos.escenario.base_de(unidad.bando)
         else:
+            self.ida = [e.posicion for e in resultado.estados]  # prueba normal: un solo tramo
             self.meta = prueba.objetivo
 
     def _mostrar_decision(self, decision) -> None:
@@ -428,8 +446,19 @@ class AplicacionTacticalGrid:
                 row=i // 3, column=2 * (i % 3) + 1, sticky="w", padx=(0, 10)
             )
 
-    def _centro(self, pos: Posicion) -> tuple[float, float]:
-        return (pos[1] + 0.5) * self.celda, (pos[0] + 0.5) * self.celda
+    def _centro(self, pos: Posicion, desplazamiento: float = 0) -> tuple[float, float]:
+        """Centro de la celda, corrido `desplazamiento` píxeles en x e y."""
+        return (
+            (pos[1] + 0.5) * self.celda + desplazamiento,
+            (pos[0] + 0.5) * self.celda + desplazamiento,
+        )
+
+    def _trazar(self, tramo: list[Posicion], color: str, desplazamiento: float) -> None:
+        """Polilínea con flecha al final por el centro de las celdas del tramo, desplazada."""
+        if len(tramo) < 2:
+            return
+        puntos = [c for pos in tramo for c in self._centro(pos, desplazamiento)]
+        self.lienzo.create_line(*puntos, fill=color, width=3, arrow=tk.LAST, capstyle="round")
 
     def _rectangulo(self, pos: Posicion, margen: float = 0, **opciones) -> None:
         x0, y0 = pos[1] * self.celda + margen, pos[0] * self.celda + margen
@@ -444,6 +473,7 @@ class AplicacionTacticalGrid:
             lienzo.configure(width=320, height=320)
             lienzo.create_text(160, 160, text="Carga un escenario para empezar", fill="#666")
             self.etiqueta_estado.configure(text="")
+            self.leyenda_camino.grid_remove()
             return
         escenario = self.datos.escenario
         self.celda = max(16, min(48, LADO_MAXIMO_PX // max(escenario.filas, escenario.columnas)))
@@ -466,11 +496,25 @@ class AplicacionTacticalGrid:
 
         if self.meta is not None:
             self._rectangulo(self.meta, margen=5, outline="#6a1b9a", width=3, dash=(4, 2))
-        if len(self.camino) > 1:
-            puntos = [coordenada for pos in self.camino for coordenada in self._centro(pos)]
-            lienzo.create_line(
-                *puntos, fill="#6a1b9a", width=3, arrow="last", capstyle="round"
+        dos_tramos = bool(self.ida) and bool(self.vuelta)
+        if dos_tramos:
+            d = self.celda / 8
+            self._trazar(self.ida, COLOR_CAMINO_IDA, -d)
+            self._trazar(self.vuelta, COLOR_CAMINO_VUELTA, d)
+            x, y = self._centro(self.ida[-1])
+            r = self.celda * 0.09
+            lienzo.create_oval(
+                x - r, y - r, x + r, y + r, fill=COLOR_CAMINO_VUELTA, outline=COLOR_CAMINO_IDA,
+                width=2,
             )
+        elif self.vuelta:  
+            self._trazar(self.vuelta, COLOR_CAMINO_VUELTA, 0)
+        else:
+            self._trazar(self.ida, COLOR_CAMINO_IDA, 0)
+        if dos_tramos:
+            self.leyenda_camino.grid()
+        else:
+            self.leyenda_camino.grid_remove()
         if self.resaltado is not None and self.resaltado[1] is not None:
             self._rectangulo(self.resaltado[1], margen=3, outline=COLOR_RESALTADO, width=4)
 
@@ -523,7 +567,7 @@ def main() -> None:
     Complexity: tiempo O(1) más lo que pida el usuario, espacio O(1)
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: OK
     """
     raiz = tk.Tk()
     AplicacionTacticalGrid(raiz)

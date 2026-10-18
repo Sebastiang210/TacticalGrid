@@ -19,6 +19,7 @@ from tacticalgrid.busqueda.problema import ProblemaNavegacion
 from tacticalgrid.busqueda.resultado import Resultado
 from tacticalgrid.carga.cargador import DatosEscenario
 from tacticalgrid.config import ORDEN_DIRECCIONES_POR_DEFECTO, PROFUNDIDAD_POR_DEFECTO
+from tacticalgrid.core.escenario import Posicion
 from tacticalgrid.core.juego import ReglasJuego
 from tacticalgrid.verificacion.verificador import (
     ReporteVerificacion,
@@ -28,7 +29,7 @@ from tacticalgrid.verificacion.verificador import (
 
 Orden = tuple[str, ...]
 
-# permutations conserva el orden de entrada, así que la primera es el orden por defecto.
+
 ORDENES_DISPONIBLES: tuple[Orden, ...] = tuple(
     itertools.permutations(ORDEN_DIRECCIONES_POR_DEFECTO)
 )
@@ -77,7 +78,7 @@ def ejecutar_busqueda(
     Complexity: la del algoritmo elegido (más O(F·C) al crear h2)
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     if algoritmo not in ALGORITMOS_BUSQUEDA:
         raise ValueError(
@@ -110,7 +111,7 @@ def ejecutar_decision(
     Complexity: tiempo O(b^d) (mejor caso O(b^(d/2)) con Alfa-beta), espacio O(d)
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     _validar_decision(algoritmo)
     reglas = ReglasJuego(datos, _orden(orden))
@@ -132,7 +133,7 @@ def ejecutar_partida(
     Complexity: tiempo O(T·b^d), espacio O(T) con T = turnos jugados
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     _validar_decision(algoritmo)
     reglas = ReglasJuego(datos, _orden(orden))
@@ -154,7 +155,7 @@ def verificar(
     Complexity: tiempo O(L) para caminos, O(T·U) para partidas y O(U) para decisiones
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     orden = _orden(orden)
     if isinstance(resultado, Resultado):
@@ -181,9 +182,34 @@ def profundidad_inicial(datos: DatosEscenario) -> int:
     Complexity: tiempo O(1), espacio O(1)
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     return datos.profundidad_maxima or PROFUNDIDAD_POR_DEFECTO
+
+
+def dividir_camino(resultado: Resultado) -> tuple[list[Posicion], list[Posicion]]:
+    """
+    Purpose: Separar el camino de una búsqueda en el tramo sin recurso (ida) y el tramo con
+        recurso (vuelta), para dibujarlos por separado.
+    Preconditions: resultado proviene de ejecutar_busqueda.
+    Postconditions: Sin éxito → ([], []). Si ningún estado lleva el recurso → (todas las
+        posiciones, []). Si el primer estado ya lo lleva → ([], todas las posiciones). Si no,
+        con i = primer índice con lleva_recurso, ida = posiciones[0..i] y vuelta =
+        posiciones[i..fin]; ambas comparten la casilla del recurso.
+    Complexity: tiempo O(L), espacio O(L) con L = largo del camino
+    AI usage: Yes
+    AI intervention: Código generado por IA a partir de la especificación del equipo.
+    Student validation: Se valida en tests/test_servicio.py
+    """
+    if not resultado.exito:
+        return [], []
+    posiciones = [e.posicion for e in resultado.estados]
+    indice = next((i for i, e in enumerate(resultado.estados) if e.lleva_recurso), None)
+    if indice is None:
+        return posiciones, []
+    if indice == 0:
+        return [], posiciones
+    return posiciones[: indice + 1], posiciones[indice:]
 
 
 def _json(contenido: dict) -> str:
@@ -199,7 +225,7 @@ def formatear_busqueda(resultado: Resultado, orden: Iterable[str]) -> str:
     Complexity: tiempo O(L), espacio O(L) con L = largo del camino
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     return _json(
         {
@@ -225,7 +251,7 @@ def formatear_decision(decision: ResultadoDecision, orden: Iterable[str]) -> str
     Complexity: tiempo O(1), espacio O(1)
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     return _json(
         {
@@ -251,7 +277,7 @@ def formatear_partida(partida: Partida, orden: Iterable[str]) -> str:
     Complexity: tiempo O(T), espacio O(T) con T = turnos jugados
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     return _json(
         {
@@ -330,7 +356,7 @@ def resumir_busqueda(resultado: Resultado, orden: Iterable[str], numero: int) ->
     Complexity: tiempo O(L), espacio O(L) con L = largo del camino
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     lineas = [_cabecera(numero, "Búsqueda", _algoritmo_busqueda(resultado.algoritmo), orden)]
     metricas = [
@@ -367,7 +393,7 @@ def resumir_decision(
     Complexity: tiempo O(1), espacio O(1)
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     lineas = [
         _cabecera(numero, "Adversarial", decision.algoritmo, orden, profundidad),
@@ -396,7 +422,7 @@ def resumir_partida(
     Complexity: tiempo O(T), espacio O(T) con T = turnos jugados
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     final = (
         f"Ganador: {partida.ganador}"
@@ -426,7 +452,7 @@ def resumir_verificacion(reporte: ReporteVerificacion) -> str:
     Complexity: tiempo O(E), espacio O(E) con E = cantidad de errores
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
-    Student validation: Pendiente
+    Student validation: Se valida en tests/test_servicio.py
     """
     if reporte.valido:
         return "✔ Verificado"
