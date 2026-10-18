@@ -58,6 +58,8 @@ COLOR_PORTADOR = "#ffc107"
 COLOR_RESALTADO = "#ff6f00"
 COLOR_CAMINO_IDA = "#6a1b9a"
 COLOR_CAMINO_VUELTA = "#F28C28"
+COLOR_EXPANDIDO_SIN = "#29b6f6"
+COLOR_EXPANDIDO_CON = "#F28C28"
 LADO_MAXIMO_PX = 600
 RAIZ_ESCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 
@@ -110,6 +112,7 @@ class AplicacionTacticalGrid:
         self.estado: EstadoJuego | None = None
         self.ida: list[Posicion] = []
         self.vuelta: list[Posicion] = []
+        self.expandidos: list[tuple[int, int, bool]] = []  # (fila, columna, lleva_recurso)
         self.meta: Posicion | None = None
         self.resaltado: tuple[str, Posicion | None] | None = None
         self.partida = None
@@ -138,15 +141,28 @@ class AplicacionTacticalGrid:
         self.lienzo.grid(row=1, column=0, sticky="nw", pady=4)
         self.leyenda_camino = ttk.Frame(marco)
         self.leyenda_camino.grid(row=2, column=0, sticky="w")
-        tk.Label(
-            self.leyenda_camino, text="▬ ida (sin recurso)", fg=COLOR_CAMINO_IDA, font=("", 9, "bold")
-        ).grid(row=0, column=0, padx=(0, 12))
-        tk.Label(
-            self.leyenda_camino,
-            text="▬ vuelta (con recurso)",
-            fg=COLOR_CAMINO_VUELTA,
-            font=("", 9, "bold"),
-        ).grid(row=0, column=1)
+        fuente = ("", 9, "bold")
+        self.etiquetas_leyenda = {
+            "ida": tk.Label(
+                self.leyenda_camino, text="▬ ida (sin recurso)", fg=COLOR_CAMINO_IDA, font=fuente
+            ),
+            "vuelta": tk.Label(
+                self.leyenda_camino, text="▬ vuelta (con recurso)", fg=COLOR_CAMINO_VUELTA,
+                font=fuente,
+            ),
+            "exp_sin": tk.Label(
+                self.leyenda_camino, text="• expandido sin recurso", fg=COLOR_EXPANDIDO_SIN,
+                font=fuente,
+            ),
+            "exp_con": tk.Label(
+                self.leyenda_camino, text="• expandido con recurso", fg=COLOR_EXPANDIDO_CON,
+                font=fuente,
+            ),
+        }
+        posiciones = {"ida": (0, 0), "vuelta": (0, 1), "exp_sin": (1, 0), "exp_con": (1, 1)}
+        for clave, etiqueta in self.etiquetas_leyenda.items():
+            fila, columna = posiciones[clave]
+            etiqueta.grid(row=fila, column=columna, padx=(0, 12), sticky="w")
         self.leyenda_camino.grid_remove()
         self.leyenda = ttk.Frame(marco)
         self.leyenda.grid(row=3, column=0, sticky="w")
@@ -273,7 +289,7 @@ class AplicacionTacticalGrid:
 
     def _limpiar_vista(self) -> None:
         """Quita camino, resaltado y partida, y vuelve a mostrar el estado inicial."""
-        self.ida, self.vuelta = [], []
+        self.ida, self.vuelta, self.expandidos = [], [], []
         self.meta, self.resaltado = None, None
         self.partida, self.indice = None, 0
         self.etiqueta_turno.configure(text="")
@@ -357,6 +373,7 @@ class AplicacionTacticalGrid:
 
     def _mostrar_busqueda(self, resultado) -> None:
         prueba = self.datos.prueba
+        self.expandidos = [(e.fila, e.columna, e.lleva_recurso) for e in resultado.orden_expansion]
         if prueba.mision == "llevar_recurso":
             self.ida, self.vuelta = dividir_camino(resultado)
             unidad = next(u for u in self.datos.unidades if u.id == prueba.unidad_inicio)
@@ -430,6 +447,8 @@ class AplicacionTacticalGrid:
         self.texto.delete("1.0", "end")
         self.texto.configure(state="disabled")
         self.ejecuciones = 0
+        self.expandidos = []
+        self._dibujar()
 
     # ------------------------------------------------------------------ dibujo
 
@@ -459,6 +478,38 @@ class AplicacionTacticalGrid:
             return
         puntos = [c for pos in tramo for c in self._centro(pos, desplazamiento)]
         self.lienzo.create_line(*puntos, fill=color, width=3, arrow=tk.LAST, capstyle="round")
+
+    def _dibujar_expandidos(self) -> None:
+        """Punto azul (arriba a la izquierda) si se expandió sin recurso; naranja (arriba a la
+        derecha) si con recurso. Se dibuja antes que el camino y las unidades."""
+        radio = max(2, self.celda * 0.07)
+        margen = self.celda * 0.15
+        for fila, columna, lleva in set(self.expandidos):
+            x = columna * self.celda + (self.celda - margen if lleva else margen)
+            y = fila * self.celda + margen
+            self.lienzo.create_oval(
+                x - radio, y - radio, x + radio, y + radio,
+                fill=COLOR_EXPANDIDO_CON if lleva else COLOR_EXPANDIDO_SIN,
+                outline="#37474f", width=1,
+            )
+
+    def _actualizar_leyenda_camino(self, dos_tramos: bool) -> None:
+        """Muestra solo las entradas de leyenda que aparecen en el mapa."""
+        visibles = {
+            "ida": dos_tramos,
+            "vuelta": dos_tramos,
+            "exp_sin": any(not lleva for _, _, lleva in self.expandidos),
+            "exp_con": any(lleva for _, _, lleva in self.expandidos),
+        }
+        for clave, etiqueta in self.etiquetas_leyenda.items():
+            if visibles[clave]:
+                etiqueta.grid()
+            else:
+                etiqueta.grid_remove()
+        if any(visibles.values()):
+            self.leyenda_camino.grid()
+        else:
+            self.leyenda_camino.grid_remove()
 
     def _rectangulo(self, pos: Posicion, margen: float = 0, **opciones) -> None:
         x0, y0 = pos[1] * self.celda + margen, pos[0] * self.celda + margen
@@ -494,6 +545,7 @@ class AplicacionTacticalGrid:
                 fill=COLOR_BANDO.get(bando, "black"),
             )
 
+        self._dibujar_expandidos()
         if self.meta is not None:
             self._rectangulo(self.meta, margen=5, outline="#6a1b9a", width=3, dash=(4, 2))
         dos_tramos = bool(self.ida) and bool(self.vuelta)
@@ -511,10 +563,7 @@ class AplicacionTacticalGrid:
             self._trazar(self.vuelta, COLOR_CAMINO_VUELTA, 0)
         else:
             self._trazar(self.ida, COLOR_CAMINO_IDA, 0)
-        if dos_tramos:
-            self.leyenda_camino.grid()
-        else:
-            self.leyenda_camino.grid_remove()
+        self._actualizar_leyenda_camino(dos_tramos)
         if self.resaltado is not None and self.resaltado[1] is not None:
             self._rectangulo(self.resaltado[1], margen=3, outline=COLOR_RESALTADO, width=4)
 

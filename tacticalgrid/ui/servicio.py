@@ -221,7 +221,8 @@ def formatear_busqueda(resultado: Resultado, orden: Iterable[str]) -> str:
     Purpose: Texto JSON legible de un resultado de búsqueda con la estructura del enunciado.
     Preconditions: resultado proviene de ejecutar_busqueda con ese orden.
     Postconditions: JSON con algoritmo, exito, camino [[f, c], ...], costo, estados_generados,
-        estados_expandidos, maximo_frontera, tiempo_ms y orden.
+        estados_expandidos, maximo_frontera, tiempo_ms, orden y orden_expansion
+        ([[f, c, lleva_recurso], ...] en el orden en que se expandieron los estados).
     Complexity: tiempo O(L), espacio O(L) con L = largo del camino
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
@@ -238,6 +239,9 @@ def formatear_busqueda(resultado: Resultado, orden: Iterable[str]) -> str:
             "maximo_frontera": resultado.max_frontera,
             "tiempo_ms": round(resultado.tiempo_ms, 3),
             "orden": list(orden),
+            "orden_expansion": [
+                [e.fila, e.columna, e.lleva_recurso] for e in resultado.orden_expansion
+            ],
         }
     )
 
@@ -359,8 +363,10 @@ def resumir_busqueda(resultado: Resultado, orden: Iterable[str], numero: int) ->
     Postconditions: Cabecera con número, algoritmo (heurística y k si aplican) y orden. Con
         éxito: "✔ Camino encontrado", el camino "(f,c) → ..." partido cada 12 casillas y en
         dos columnas Movimientos, Costo, Expandidos, Generados, Frontera máx. y Tiempo. Sin
-        éxito: "✘ No existe camino" y las métricas de búsqueda.
-    Complexity: tiempo O(L), espacio O(L) con L = largo del camino
+        éxito: "✘ No existe camino" y las métricas de búsqueda. En ambos casos, antes de las
+        métricas, "Estados expandidos: N · celdas distintas: M" (M = celdas (f, c) distintas
+        de orden_expansion).
+    Complexity: tiempo O(L + E), espacio O(L + E) con L = largo del camino y E = expandidos
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
     Student validation: Se valida en tests/test_servicio.py
@@ -385,6 +391,10 @@ def resumir_busqueda(resultado: Resultado, orden: Iterable[str], numero: int) ->
         ]
     else:
         lineas.append("✘ No existe camino")
+    distintas = len({(e.fila, e.columna) for e in resultado.orden_expansion})
+    lineas.append(
+        f"  Estados expandidos: {resultado.nodos_expandidos} · celdas distintas: {distintas}"
+    )
     lineas += _columnas(metricas)
     return "\n".join(lineas)
 

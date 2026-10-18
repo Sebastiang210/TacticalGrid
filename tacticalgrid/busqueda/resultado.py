@@ -4,13 +4,18 @@ from dataclasses import dataclass
 
 from tacticalgrid.core.navegacion import EstadoNavegacion
 
-# estado -> (estado_padre, accion, costo_paso); None para el estado inicial
+
 Padres = dict[EstadoNavegacion, tuple[EstadoNavegacion, str, float] | None]
 
 
 @dataclass(frozen=True)
 class Resultado:
-    """Camino encontrado (vacío si no hay éxito) y métricas de la búsqueda."""
+    """
+    Camino encontrado (vacío si no hay éxito) y métricas de la búsqueda.
+
+    orden_expansion son los estados en el orden en que se expandieron (uno por cada
+    nodos_expandidos).
+    """
 
     algoritmo: str
     exito: bool
@@ -21,6 +26,7 @@ class Resultado:
     nodos_generados: int
     max_frontera: int
     tiempo_ms: float
+    orden_expansion: tuple[EstadoNavegacion, ...] = ()
 
     @property
     def movimientos(self) -> int:

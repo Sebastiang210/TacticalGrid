@@ -25,12 +25,14 @@ def _resultado(
     generados: int,
     max_frontera: int,
     inicio: float,
+    orden_expansion: list[EstadoNavegacion],
 ) -> Resultado:
     """
     Purpose: Armar el Resultado de una búsqueda terminada, con o sin éxito.
     Preconditions: Si final no es None, está en padres; inicio viene de perf_counter().
     Postconditions: Con final, el camino reconstruido y exito True; sin final, exito False,
-        camino vacío y costo 0. Las métricas se copian tal cual.
+        camino vacío y costo 0. Las métricas se copian tal cual y orden_expansion
+        queda como tupla.
     Complexity: tiempo O(L), espacio O(L) con L = largo del camino
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.
@@ -50,6 +52,7 @@ def _resultado(
         nodos_generados=generados,
         max_frontera=max_frontera,
         tiempo_ms=(perf_counter() - inicio) * 1000,
+        orden_expansion=tuple(orden_expansion),
     )
 
 
@@ -71,10 +74,12 @@ def bfs(problema: ProblemaNavegacion) -> Resultado:
     frontera = deque([inicial])
     padres: Padres = {inicial: None}
     expandidos, generados, max_frontera = 0, 1, 1
+    orden: list[EstadoNavegacion] = []  
     while frontera:
         estado = frontera.popleft()
         if problema.es_objetivo(estado):
-            return _resultado("BFS", padres, estado, expandidos, generados, max_frontera, inicio)
+            return _resultado("BFS", padres, estado, expandidos, generados, max_frontera, inicio, orden)
+        orden.append(estado)
         expandidos += 1
         sucesores = problema.sucesores(estado)
         generados += len(sucesores)
@@ -83,7 +88,7 @@ def bfs(problema: ProblemaNavegacion) -> Resultado:
                 padres[sucesor] = (estado, accion, costo)
                 frontera.append(sucesor)
         max_frontera = max(max_frontera, len(frontera))
-    return _resultado("BFS", padres, None, expandidos, generados, max_frontera, inicio)
+    return _resultado("BFS", padres, None, expandidos, generados, max_frontera, inicio, orden)
 
 
 def dfs(problema: ProblemaNavegacion) -> Resultado:
@@ -106,13 +111,15 @@ def dfs(problema: ProblemaNavegacion) -> Resultado:
     ]
     padres: Padres = {}
     expandidos, generados, max_frontera = 0, 1, 1
+    orden: list[EstadoNavegacion] = []  
     while frontera:
         estado, paso = frontera.pop()
         if estado in padres:
             continue
         padres[estado] = paso
         if problema.es_objetivo(estado):
-            return _resultado("DFS", padres, estado, expandidos, generados, max_frontera, inicio)
+            return _resultado("DFS", padres, estado, expandidos, generados, max_frontera, inicio, orden)
+        orden.append(estado)
         expandidos += 1
         sucesores = problema.sucesores(estado)
         generados += len(sucesores)
@@ -120,7 +127,7 @@ def dfs(problema: ProblemaNavegacion) -> Resultado:
             if sucesor not in padres:
                 frontera.append((sucesor, (estado, accion, costo)))
         max_frontera = max(max_frontera, len(frontera))
-    return _resultado("DFS", padres, None, expandidos, generados, max_frontera, inicio)
+    return _resultado("DFS", padres, None, expandidos, generados, max_frontera, inicio, orden)
 
 
 def ucs(problema: ProblemaNavegacion) -> Resultado:
@@ -145,13 +152,15 @@ def ucs(problema: ProblemaNavegacion) -> Resultado:
     padres: Padres = {inicial: None}
     cerrados: set[EstadoNavegacion] = set()
     expandidos, generados, max_frontera = 0, 1, 1
+    orden: list[EstadoNavegacion] = []  
     while frontera:
         g, _, estado = heapq.heappop(frontera)
         if estado in cerrados or g > mejor_g[estado]:
             continue
         if problema.es_objetivo(estado):
-            return _resultado("UCS", padres, estado, expandidos, generados, max_frontera, inicio)
+            return _resultado("UCS", padres, estado, expandidos, generados, max_frontera, inicio, orden)
         cerrados.add(estado)
+        orden.append(estado)
         expandidos += 1
         sucesores = problema.sucesores(estado)
         generados += len(sucesores)
@@ -164,4 +173,4 @@ def ucs(problema: ProblemaNavegacion) -> Resultado:
                 padres[sucesor] = (estado, accion, costo)
                 heapq.heappush(frontera, (nuevo_g, next(contador), sucesor))
         max_frontera = max(max_frontera, len(frontera))
-    return _resultado("UCS", padres, None, expandidos, generados, max_frontera, inicio)
+    return _resultado("UCS", padres, None, expandidos, generados, max_frontera, inicio, orden)

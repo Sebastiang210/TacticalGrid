@@ -1,7 +1,7 @@
 escenario,profundidad,ganador,turnos,tiempo_total_ms,verificado,python,sistema
-ADV,2,B,18,25.283,True,3.12.3,Windows-10-10.0.19045-SP0
-ADV,3,empate,200,900.532,True,3.12.3,Windows-10-10.0.19045-SP0
-ADV,4,empate,200,2031.755,True,3.12.3,Windows-10-10.0.19045-SP0
-ORDEN,2,empate,200,215.292,True,3.12.3,Windows-10-10.0.19045-SP0
-ORDEN,3,empate,200,919.568,True,3.12.3,Windows-10-10.0.19045-SP0
-ORDEN,4,empate,200,3288.865,True,3.12.3,Windows-10-10.0.19045-SP0
+ADV,2,B,18,17.739,True,3.12.3,Windows-10-10.0.19045-SP0
+ADV,3,empate,200,650.256,True,3.12.3,Windows-10-10.0.19045-SP0
+ADV,4,empate,200,1584.516,True,3.12.3,Windows-10-10.0.19045-SP0
+ORDEN,2,empate,200,248.967,True,3.12.3,Windows-10-10.0.19045-SP0
+ORDEN,3,empate,200,910.867,True,3.12.3,Windows-10-10.0.19045-SP0
+ORDEN,4,empate,200,3275.455,True,3.12.3,Windows-10-10.0.19045-SP0

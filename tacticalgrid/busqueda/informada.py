@@ -26,12 +26,14 @@ def _resultado(
     generados: int,
     max_frontera: int,
     inicio: float,
+    orden_expansion: list[EstadoNavegacion],
 ) -> Resultado:
     """
     Purpose: Armar el Resultado de una búsqueda terminada, con o sin éxito.
     Preconditions: Si final no es None, está en padres; inicio viene de perf_counter().
     Postconditions: Con final, el camino reconstruido y exito True; sin final, exito False,
-        camino vacío y costo 0. Las métricas se copian tal cual.
+        camino vacío y costo 0. Las métricas se copian tal cual y orden_expansion
+        queda como tupla.
     Complexity: tiempo O(L), espacio O(L) con L = largo del camino
     AI usage: Yes
     AI intervention: Código generado por IA a partir de la especificación del equipo.   
@@ -50,6 +52,7 @@ def _resultado(
         nodos_generados=generados,
         max_frontera=max_frontera,
         tiempo_ms=(perf_counter() - inicio) * 1000,
+        orden_expansion=tuple(orden_expansion),
     )
 
 
@@ -82,15 +85,17 @@ def a_estrella(
     padres: Padres = {inicial: None}
     cerrados: set[EstadoNavegacion] = set()
     expandidos, generados, max_frontera = 0, 1, 1
+    orden: list[EstadoNavegacion] = []  
     while frontera:
         f, h, _, estado = heapq.heappop(frontera)
         if estado in cerrados or f > mejor_g[estado] + h:
             continue
         if problema.es_objetivo(estado):
             return _resultado(
-                algoritmo, padres, estado, expandidos, generados, max_frontera, inicio
+                algoritmo, padres, estado, expandidos, generados, max_frontera, inicio, orden
             )
         cerrados.add(estado)
+        orden.append(estado)
         expandidos += 1
         g = mejor_g[estado]
         sucesores = problema.sucesores(estado)
@@ -109,7 +114,7 @@ def a_estrella(
                     frontera, (nuevo_g + h_sucesor, h_sucesor, next(contador), sucesor)
                 )
         max_frontera = max(max_frontera, len(frontera))
-    return _resultado(algoritmo, padres, None, expandidos, generados, max_frontera, inicio)
+    return _resultado(algoritmo, padres, None, expandidos, generados, max_frontera, inicio, orden)
 
 
 def beam(
@@ -143,14 +148,16 @@ def beam(
     padres: Padres = {inicial: None}
     cerrados: set[EstadoNavegacion] = set()
     expandidos, generados, max_frontera = 0, 1, 1
+    orden: list[EstadoNavegacion] = []  
     while frontera:
         estado = min(frontera, key=frontera.__getitem__)
         del frontera[estado]
         if problema.es_objetivo(estado):
             return _resultado(
-                algoritmo, padres, estado, expandidos, generados, max_frontera, inicio
+                algoritmo, padres, estado, expandidos, generados, max_frontera, inicio, orden
             )
         cerrados.add(estado)
+        orden.append(estado)
         expandidos += 1
         sucesores = problema.sucesores(estado)
         generados += len(sucesores)
@@ -169,4 +176,4 @@ def beam(
         max_frontera = max(max_frontera, len(frontera))
         if len(frontera) > k:
             frontera = dict(heapq.nsmallest(k, frontera.items(), key=lambda par: par[1]))
-    return _resultado(algoritmo, padres, None, expandidos, generados, max_frontera, inicio)
+    return _resultado(algoritmo, padres, None, expandidos, generados, max_frontera, inicio, orden)

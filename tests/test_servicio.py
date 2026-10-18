@@ -125,7 +125,7 @@ def test_formatear_busqueda(datos):
     contenido = json.loads(formatear_busqueda(resultado, ORDEN_DIRECCIONES_POR_DEFECTO))
     assert set(contenido) == {
         "algoritmo", "exito", "camino", "costo", "estados_generados", "estados_expandidos",
-        "maximo_frontera", "tiempo_ms", "orden",
+        "maximo_frontera", "tiempo_ms", "orden", "orden_expansion",
     }
     assert contenido["camino"][0] == [0, 1]
     assert contenido["camino"][-1] == [3, 2]
@@ -284,3 +284,20 @@ def test_formatear_decision_incluye_jugadas_consideradas(datos):
     assert len(consideradas) == 5
     assert all(set(c) == {"jugada", "valor", "exacto"} for c in consideradas)
     assert [c["exacto"] for c in consideradas] == [True, False, False, True, False]
+
+
+def test_resumir_busqueda_incluye_estados_expandidos(datos):
+    resultado = ejecutar_busqueda(datos, "UCS")
+    texto = resumir_busqueda(resultado, ORDEN_DIRECCIONES_POR_DEFECTO, 1)
+    assert "Estados expandidos" in texto and "celdas distintas" in texto
+    distintas = len({(e.fila, e.columna) for e in resultado.orden_expansion})
+    assert f"Estados expandidos: {resultado.nodos_expandidos} · celdas distintas: {distintas}" in texto
+
+
+def test_formatear_busqueda_incluye_orden_expansion(datos):
+    resultado = ejecutar_busqueda(datos, "A*", "h2")
+    contenido = json.loads(formatear_busqueda(resultado, ORDEN_DIRECCIONES_POR_DEFECTO))
+    orden = contenido["orden_expansion"]
+    assert len(orden) == resultado.nodos_expandidos
+    assert orden[0] == [0, 1, False]
+    assert all(len(e) == 3 and isinstance(e[2], bool) for e in orden)
